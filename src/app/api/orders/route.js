@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { sql } from "@vercel/postgres";
 import fs from "fs/promises";
 import path from "path";
+import nodemailer from "nodemailer";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -17,6 +18,204 @@ function normalizeText(value) {
 function normalizeEmail(value) {
   const v = normalizeText(value).toLowerCase();
   return v;
+}
+
+function isEmailSendable(value) {
+  const v = normalizeEmail(value);
+  return Boolean(v) && v.includes("@") && v.includes(".");
+}
+
+function escapeHtml(value) {
+  const v = typeof value === "string" ? value : String(value ?? "");
+  return v.replace(/[&<>"']/g, (ch) => {
+    if (ch === "&") return "&amp;";
+    if (ch === "<") return "&lt;";
+    if (ch === ">") return "&gt;";
+    if (ch === '"') return "&quot;";
+    if (ch === "'") return "&#39;";
+    return ch;
+  });
+}
+
+function smtpPort() {
+  const raw = process.env.SMTP_PORT;
+  const n = raw ? Number(raw) : 0;
+  return Number.isFinite(n) && n > 0 ? n : 587;
+}
+
+function smtpSecure() {
+  const raw = (process.env.SMTP_SECURE || "").toLowerCase();
+  if (raw === "true" || raw === "1" || raw === "yes") return true;
+  if (raw === "false" || raw === "0" || raw === "no") return false;
+  if (raw === "tls" || raw === "starttls") return false;
+  if (raw === "ssl") return true;
+  return smtpPort() === 465;
+}
+
+function hasSmtpConfig() {
+  return Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS);
+}
+
+function mailFromAddress() {
+  const v = normalizeText(process.env.SMTP_FROM);
+  return v || normalizeText(process.env.SMTP_USER) || "no-reply@example.com";
+}
+
+function appName() {
+  const v = normalizeText(process.env.APP_NAME);
+  return v || "EduNextG";
+}
+
+function transport() {
+  if (!hasSmtpConfig()) return null;
+  return nodemailer.createTransport({
+    host: process.env.SMTP_HOST,
+    port: smtpPort(),
+    secure: smtpSecure(),
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS,
+    },
+  });
+}
+
+function emailSubject(order) {
+  const orderId = Number(order?.id) || 0;
+  const type = normalizeText(order?.productType).toLowerCase();
+  const subjectBase = type === "service" ? "Booking confirmed" : "Order confirmed";
+  const suffix = orderId > 0 ? ` (Ref #${orderId})` : "";
+  return `${appName()} - ${subjectBase}${suffix}`;
+}
+
+function emailHtml(order) {
+  const type = normalizeText(order?.productType).toLowerCase();
+  const label = type === "service" ? "Booking details" : "Order details";
+  const orderId = Number(order?.id) || 0;
+  const createdAt = normalizeText(order?.createdAt);
+  const createdAtDisplay = createdAt ? new Date(createdAt).toLocaleString() : "";
+  const productName = escapeHtml(normalizeText(order?.productName));
+  const productType = escapeHtml(type ? type[0].toUpperCase() + type.slice(1) : "");
+  const unitPrice = Number(order?.unitPrice || 0);
+  const quantity = Number(order?.quantity || 0) || 1;
+  const totalPrice = Number(order?.totalPrice || 0);
+  const fullName = escapeHtml(`${normalizeText(order?.firstName)} ${normalizeText(order?.lastName)}`.trim());
+  const email = escapeHtml(normalizeText(order?.email));
+  const contactNo = escapeHtml(normalizeText(order?.contactNo));
+  const location = escapeHtml(normalizeText(order?.deliveryLocation));
+  const status = escapeHtml(normalizeText(order?.status) || "pending");
+
+  return `<!doctype html>
+<html>
+  <body style="margin:0;padding:0;background:#f6f7fb;font-family:Arial,Helvetica,sans-serif;color:#0f172a;">
+    <div style="max-width:720px;margin:0 auto;padding:24px;">
+      <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:16px;overflow:hidden;">
+        <div style="padding:20px 22px;background:linear-gradient(135deg, rgba(13,110,253,0.12), rgba(13,110,253,0));border-bottom:1px solid #e2e8f0;">
+          <div style="font-size:18px;font-weight:800;">${escapeHtml(appName())}</div>
+          <div style="margin-top:4px;color:#475569;font-size:13px;">${escapeHtml(label)}</div>
+        </div>
+        <div style="padding:22px;">
+          <div style="font-size:14px;line-height:1.6;color:#0f172a;">
+            <div>Hi ${fullName || "there"},</div>
+            <div style="margin-top:8px;">We have received your ${type === "service" ? "booking request" : "order request"}. Our team will contact you shortly.</div>
+          </div>
+
+          <div style="margin-top:18px;border:1px solid #e2e8f0;border-radius:14px;overflow:hidden;">
+            <div style="padding:12px 14px;background:#f8fafc;font-weight:700;font-size:13px;">Summary</div>
+            <table style="width:100%;border-collapse:collapse;font-size:13px;">
+              <tr><td style="padding:10px 14px;border-top:1px solid #e2e8f0;color:#475569;">Reference</td><td style="padding:10px 14px;border-top:1px solid #e2e8f0;font-weight:700;">${orderId ? `#${orderId}` : "-"}</td></tr>
+              <tr><td style="padding:10px 14px;border-top:1px solid #e2e8f0;color:#475569;">Product type</td><td style="padding:10px 14px;border-top:1px solid #e2e8f0;font-weight:700;">${productType || "-"}</td></tr>
+              <tr><td style="padding:10px 14px;border-top:1px solid #e2e8f0;color:#475569;">Product</td><td style="padding:10px 14px;border-top:1px solid #e2e8f0;font-weight:700;">${productName || "-"}</td></tr>
+              <tr><td style="padding:10px 14px;border-top:1px solid #e2e8f0;color:#475569;">Unit price</td><td style="padding:10px 14px;border-top:1px solid #e2e8f0;font-weight:700;">₹${unitPrice.toFixed(2)}</td></tr>
+              <tr><td style="padding:10px 14px;border-top:1px solid #e2e8f0;color:#475569;">Quantity</td><td style="padding:10px 14px;border-top:1px solid #e2e8f0;font-weight:700;">${quantity}</td></tr>
+              <tr><td style="padding:10px 14px;border-top:1px solid #e2e8f0;color:#475569;">Total</td><td style="padding:10px 14px;border-top:1px solid #e2e8f0;font-weight:800;">₹${totalPrice.toFixed(2)}</td></tr>
+              <tr><td style="padding:10px 14px;border-top:1px solid #e2e8f0;color:#475569;">Status</td><td style="padding:10px 14px;border-top:1px solid #e2e8f0;font-weight:700;">${status}</td></tr>
+              ${createdAtDisplay ? `<tr><td style="padding:10px 14px;border-top:1px solid #e2e8f0;color:#475569;">Created</td><td style="padding:10px 14px;border-top:1px solid #e2e8f0;font-weight:700;">${escapeHtml(createdAtDisplay)}</td></tr>` : ""}
+            </table>
+          </div>
+
+          <div style="margin-top:18px;border:1px solid #e2e8f0;border-radius:14px;overflow:hidden;">
+            <div style="padding:12px 14px;background:#f8fafc;font-weight:700;font-size:13px;">Customer</div>
+            <table style="width:100%;border-collapse:collapse;font-size:13px;">
+              <tr><td style="padding:10px 14px;border-top:1px solid #e2e8f0;color:#475569;">Name</td><td style="padding:10px 14px;border-top:1px solid #e2e8f0;font-weight:700;">${fullName || "-"}</td></tr>
+              <tr><td style="padding:10px 14px;border-top:1px solid #e2e8f0;color:#475569;">Email</td><td style="padding:10px 14px;border-top:1px solid #e2e8f0;font-weight:700;">${email || "-"}</td></tr>
+              <tr><td style="padding:10px 14px;border-top:1px solid #e2e8f0;color:#475569;">Contact</td><td style="padding:10px 14px;border-top:1px solid #e2e8f0;font-weight:700;">${contactNo || "-"}</td></tr>
+              <tr><td style="padding:10px 14px;border-top:1px solid #e2e8f0;color:#475569;">Delivery / Location</td><td style="padding:10px 14px;border-top:1px solid #e2e8f0;font-weight:700;">${location || "-"}</td></tr>
+            </table>
+          </div>
+
+          <div style="margin-top:18px;color:#64748b;font-size:12px;line-height:1.6;">
+            If you didn’t make this request, please reply to this email.
+          </div>
+        </div>
+      </div>
+      <div style="text-align:center;color:#94a3b8;font-size:11px;padding:14px 0;">
+        © ${new Date().getFullYear()} ${escapeHtml(appName())}
+      </div>
+    </div>
+  </body>
+</html>`;
+}
+
+function emailText(order) {
+  const type = normalizeText(order?.productType).toLowerCase();
+  const label = type === "service" ? "BOOKING CONFIRMATION" : "ORDER CONFIRMATION";
+  const orderId = Number(order?.id) || 0;
+  const productName = normalizeText(order?.productName);
+  const unitPrice = Number(order?.unitPrice || 0);
+  const quantity = Number(order?.quantity || 0) || 1;
+  const totalPrice = Number(order?.totalPrice || 0);
+  const fullName = `${normalizeText(order?.firstName)} ${normalizeText(order?.lastName)}`.trim();
+  const email = normalizeText(order?.email);
+  const contactNo = normalizeText(order?.contactNo);
+  const location = normalizeText(order?.deliveryLocation);
+  const status = normalizeText(order?.status) || "pending";
+  const createdAt = normalizeText(order?.createdAt);
+  const createdAtDisplay = createdAt ? new Date(createdAt).toLocaleString() : "";
+
+  return [
+    `${appName()} - ${label}`,
+    "",
+    `Reference: ${orderId ? `#${orderId}` : "-"}`,
+    `Product type: ${type || "-"}`,
+    `Product: ${productName || "-"}`,
+    `Unit price: ₹${unitPrice.toFixed(2)}`,
+    `Quantity: ${quantity}`,
+    `Total: ₹${totalPrice.toFixed(2)}`,
+    `Status: ${status}`,
+    createdAtDisplay ? `Created: ${createdAtDisplay}` : "",
+    "",
+    "Customer",
+    `Name: ${fullName || "-"}`,
+    `Email: ${email || "-"}`,
+    `Contact: ${contactNo || "-"}`,
+    `Delivery / Location: ${location || "-"}`,
+    "",
+    "If you didn’t make this request, please reply to this email.",
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
+async function sendOrderConfirmationEmail(order) {
+  const to = normalizeEmail(order?.email);
+  if (!isEmailSendable(to)) return { ok: false, skipped: true, reason: "invalid_email" };
+
+  const t = transport();
+  if (!t) return { ok: false, skipped: true, reason: "smtp_not_configured" };
+
+  const from = mailFromAddress();
+  const replyTo = normalizeText(process.env.SMTP_REPLY_TO);
+  const message = {
+    from,
+    to,
+    subject: emailSubject(order),
+    text: emailText(order),
+    html: emailHtml(order),
+    ...(replyTo ? { replyTo } : {}),
+  };
+
+  await t.sendMail(message);
+  return { ok: true };
 }
 
 function normalizeInt(value, { min = 0 } = {}) {
@@ -209,6 +408,11 @@ export async function POST(request) {
       };
       orders.unshift(order);
       await writeLocalOrders(orders);
+      try {
+        await sendOrderConfirmationEmail(order);
+      } catch (e) {
+        console.error("Order email failed", e instanceof Error ? e.message : e);
+      }
       return NextResponse.json({ ok: true, data: order }, { status: 201 });
     }
 
@@ -266,32 +470,33 @@ export async function POST(request) {
     `;
 
     const r = rows[0];
-    return NextResponse.json(
-      {
-        ok: true,
-        data: {
-          id: Number(r.id) || 0,
-          productType: r.product_type,
-          productId: Number(r.product_id) || 0,
-          productName: r.product_name,
-          productThumbnailDataUrl: r.product_thumbnail_data_url ?? "",
-          unitPrice: Number(r.unit_price || 0),
-          quantity: Number(r.quantity || 0),
-          totalPrice: Number(r.total_price || 0),
-          firstName: r.first_name ?? "",
-          lastName: r.last_name ?? "",
-          email: r.email ?? "",
-          contactNo: r.contact_no ?? "",
-          deliveryLocation: r.delivery_location ?? "",
-          status: r.status ?? "pending",
-          createdAt: r.created_at,
-          updatedAt: r.updated_at,
-        },
-      },
-      { status: 201 },
-    );
+    const data = {
+      id: Number(r.id) || 0,
+      productType: r.product_type,
+      productId: Number(r.product_id) || 0,
+      productName: r.product_name,
+      productThumbnailDataUrl: r.product_thumbnail_data_url ?? "",
+      unitPrice: Number(r.unit_price || 0),
+      quantity: Number(r.quantity || 0),
+      totalPrice: Number(r.total_price || 0),
+      firstName: r.first_name ?? "",
+      lastName: r.last_name ?? "",
+      email: r.email ?? "",
+      contactNo: r.contact_no ?? "",
+      deliveryLocation: r.delivery_location ?? "",
+      status: r.status ?? "pending",
+      createdAt: r.created_at,
+      updatedAt: r.updated_at,
+    };
+
+    try {
+      await sendOrderConfirmationEmail(data);
+    } catch (e) {
+      console.error("Order email failed", e instanceof Error ? e.message : e);
+    }
+
+    return NextResponse.json({ ok: true, data }, { status: 201 });
   } catch {
     return NextResponse.json({ ok: false, error: "Failed to place order" }, { status: 500 });
   }
 }
-

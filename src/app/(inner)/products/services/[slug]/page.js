@@ -186,7 +186,7 @@ export default function ServiceProductDetails() {
       if (!res.ok || !json || json.ok !== true) {
         throw new Error(json?.error || "Failed to place order");
       }
-      setOrderSuccess("Order placed successfully");
+      setOrderSuccess("Booking submitted successfully");
       setOrderForm({
         firstName: "",
         lastName: "",
@@ -506,7 +506,7 @@ export default function ServiceProductDetails() {
                       <i className="fa-solid fa-bag-shopping" />
                     </div>
                     <div>
-                      <div className="h5 mb-0">Place your order</div>
+                      <div className="h5 mb-0">Book your service</div>
                       <div className="text-muted small">Fill in your details to confirm</div>
                     </div>
                   </div>
@@ -607,7 +607,7 @@ export default function ServiceProductDetails() {
                       </div>
 
                       <div className="col-12 col-lg-5">
-                        <div className="modalSectionTitle mb-3">Order summary</div>
+                        <div className="modalSectionTitle mb-3">Booking summary</div>
                         <div className="card border-0 shadow-sm modalSummaryCard">
                           <div className="card-body p-3 p-md-4">
                             <div className="d-flex align-items-center gap-3">
@@ -642,7 +642,7 @@ export default function ServiceProductDetails() {
                                 Cancel
                               </button>
                               <button type="submit" className="btn btn-primary btn-sm px-3" disabled={isPlacingOrder}>
-                                {isPlacingOrder ? "Placing..." : "Place Order"}
+                                {isPlacingOrder ? "Booking..." : "Book Now"}
                               </button>
                             </div>
                           </div>
