@@ -1,46 +1,212 @@
 "use client"
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import HeaderTwo from "@/components/header/HeaderTwo";
+import { Swiper, SwiperSlide } from "swiper/react";
+import { Navigation, Pagination } from "swiper/modules";
+import "swiper/css";
+import "swiper/css/navigation";
+import "swiper/css/pagination";
 
 
 import BackToTop from "@/components/common/BackToTop";
-import Posts from '@/data/Posts.json';
 
 import FooterOne from "@/components/footer/FooterOne";
 
-export default function BlogDetails() {
+export default function HardwareProductDetails() {
   const { slug } = useParams(); // Get the slug from URL parameters
-  const blogPost = Posts.find((post) => post.slug === slug);
-
-  // Declare hooks unconditionally at the top
-  const [comments, setComments] = useState([]);
-  const [formData, setFormData] = useState({
-    name: "",
+  const [product, setProduct] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+  const [isOrderOpen, setIsOrderOpen] = useState(false);
+  const [isPlacingOrder, setIsPlacingOrder] = useState(false);
+  const [orderError, setOrderError] = useState("");
+  const [orderSuccess, setOrderSuccess] = useState("");
+  const [orderForm, setOrderForm] = useState({
+    firstName: "",
+    lastName: "",
     email: "",
-    topic: "",
-    comment: "",
+    contactNo: "",
+    deliveryLocation: "",
+    quantity: "1",
   });
 
+  useEffect(() => {
+    if (!slug) return;
+    let cancelled = false;
+
+    function slugify(value) {
+      const v = typeof value === "string" ? value.trim().toLowerCase() : "";
+      return v
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+/, "")
+        .replace(/-+$/, "");
+    }
+
+    async function load() {
+      try {
+        setIsLoading(true);
+        setLoadError("");
+        const res = await fetch("/api/products/hardware", { cache: "no-store" });
+        const json = await res.json().catch(() => null);
+        if (!res.ok || !json || json.ok !== true) {
+          const message = json?.error || "Failed to load product";
+          throw new Error(message);
+        }
+        const list = Array.isArray(json.data) ? json.data : [];
+        const slugValue = Array.isArray(slug) ? slug[0] : slug;
+        const numericId = Number(slugValue);
+        const found = Number.isFinite(numericId) && String(numericId) === String(slugValue)
+          ? list.find((p) => Number(p?.id) === numericId)
+          : list.find((p) => slugify(p?.name) === String(slugValue || ""));
+        if (!cancelled) setProduct(found || null);
+      } catch (e) {
+        if (!cancelled) setLoadError(e instanceof Error ? e.message : "Failed to load product");
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    }
+
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [slug]);
+
   // If no blog post is found, display an error
-  if (!blogPost) {
-    return <div>Post not found Man!</div>;
+  if (isLoading) {
+    return (
+      <div className="">
+        <HeaderTwo />
+        <div className="rts-blog-list-area rts-section-gapTop">
+          <div className="container">
+            <div className="row">
+              <div className="col-12">
+                <div className="alert alert-info mb-0" role="alert">
+                  Loading...
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <BackToTop />
+        <FooterOne />
+      </div>
+    );
   }
 
-  // Handle input changes
-  const handleChange = (e) => {
-    const { name, value } = e.target; // Correct destructuring
-    setFormData({
-      ...formData,
-      [name]: value, // Update the form field dynamically
-    });
+  if (loadError) {
+    return (
+      <div className="">
+        <HeaderTwo />
+        <div className="rts-blog-list-area rts-section-gapTop">
+          <div className="container">
+            <div className="row">
+              <div className="col-12">
+                <div className="alert alert-danger mb-0" role="alert">
+                  {loadError}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <BackToTop />
+        <FooterOne />
+      </div>
+    );
+  }
+
+  if (!product) {
+    return (
+      <div className="">
+        <HeaderTwo />
+        <div className="rts-blog-list-area rts-section-gapTop">
+          <div className="container">
+            <div className="row">
+              <div className="col-12">
+                <div className="alert alert-warning mb-0" role="alert">
+                  Product not found
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <BackToTop />
+        <FooterOne />
+      </div>
+    );
+  }
+
+  const unitPrice = Number(product?.price || 0);
+  const qtyNumber = Math.max(1, Math.trunc(Number(orderForm.quantity || 1) || 1));
+  const totalPrice = Number((unitPrice * qtyNumber).toFixed(2));
+  const shortDesc = typeof product?.shortDesc === "string" ? product.shortDesc.trim() : "";
+  const longDescText = typeof product?.longDesc === "string" ? product.longDesc.trim() : "";
+  const longDescParts = longDescText
+    ? longDescText
+      .split(/\n+/)
+      .map((p) => p.trim())
+      .filter(Boolean)
+    : [];
+  const productImages = Array.isArray(product?.images) ? product.images.filter((s) => typeof s === "string" && s.trim()) : [];
+  const sliderImages = productImages.length ? productImages : ["/assets/images/blog/01.webp"];
+  const sliderShouldLoop = sliderImages.length > 1;
+
+  const openOrder = () => {
+    setOrderError("");
+    setOrderSuccess("");
+    setIsOrderOpen(true);
   };
 
-  // Handle form submission
-  const handleSubmit = (e) => {
+  const closeOrder = () => {
+    if (isPlacingOrder) return;
+    setIsOrderOpen(false);
+  };
+
+  const onOrderFieldChange = (e) => {
+    const { name, value } = e.target;
+    setOrderForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const submitOrder = async (e) => {
     e.preventDefault();
-    setComments([{ ...formData }, ...comments]); // Add new comment to the top
-    setFormData({ name: "", email: "", topic: "", comment: "" }); // Clear form
+    setIsPlacingOrder(true);
+    setOrderError("");
+    setOrderSuccess("");
+    try {
+      const res = await fetch("/api/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          productType: "hardware",
+          productId: product.id,
+          firstName: orderForm.firstName,
+          lastName: orderForm.lastName,
+          email: orderForm.email,
+          contactNo: orderForm.contactNo,
+          deliveryLocation: orderForm.deliveryLocation,
+          quantity: qtyNumber,
+        }),
+      });
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json || json.ok !== true) {
+        throw new Error(json?.error || "Failed to place order");
+      }
+      setOrderSuccess("Order placed successfully");
+      setOrderForm({
+        firstName: "",
+        lastName: "",
+        email: "",
+        contactNo: "",
+        deliveryLocation: "",
+        quantity: "1",
+      });
+      setIsOrderOpen(false);
+    } catch (err) {
+      setOrderError(err instanceof Error ? err.message : "Failed to place order");
+    } finally {
+      setIsPlacingOrder(false);
+    }
   };
 
   return (
@@ -54,7 +220,7 @@ export default function BlogDetails() {
             <div className="row">
               <div className="col-lg-12">
                 <div className="career-page-single-banner blog-page">
-                  <h1 className="title">{blogPost.title}</h1>
+                  <h1 className="title">{product.name}</h1>
                 </div>
               </div>
             </div>
@@ -68,247 +234,101 @@ export default function BlogDetails() {
                 {/* single post */}
                 <div className="blog-single-post-listing details mb--0">
                   <div className="thumbnail">
-                    <img src={`${blogPost.bannerImg}`}
-                      alt={blogPost.title} />
+                    <Swiper
+                      slidesPerView={1}
+                      loop={sliderShouldLoop}
+                      navigation={sliderShouldLoop}
+                      pagination={{ clickable: true }}
+                      modules={[Navigation, Pagination]}
+                      className="productImageSwiper"
+                    >
+                      {sliderImages.map((src) => (
+                        <SwiperSlide key={src}>
+                          <div className="productImageSlide">
+                            <img src={src} alt={product.name} />
+                          </div>
+                        </SwiperSlide>
+                      ))}
+                    </Swiper>
                   </div>
                   <div className="blog-listing-content">
-                    <div className="user-info">
-                      {/* single info */}
-                      <div className="single">
-                        <i className="far fa-user-circle" />
-                        <span>by David Smith</span>
+                    {orderSuccess ? (
+                      <div className="alert alert-success" role="alert">
+                        {orderSuccess}
                       </div>
-                      {/* single infoe end */}
-                      {/* single info */}
-                      <div className="single">
-                        <i className="far fa-clock" />
-                        <span>by David Smith</span>
+                    ) : null}
+                    <div className="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-4">
+                      <div>
+                        <div className="text-muted small">Price</div>
+                        <div className="h5 mb-0">₹{unitPrice.toFixed(2)}</div>
                       </div>
-                      {/* single infoe end */}
-                      {/* single info */}
-                      <div className="single">
-                        <i className="far fa-tags" />
-                        <span>by David Smith</span>
-                      </div>
-                      {/* single infoe end */}
+                      <button type="button" className="rts-btn btn-primary" onClick={openOrder}>
+                        Order Now
+                      </button>
                     </div>
                     <h3 className="title animated fadeIn">
-                      Building smart business solution for you
+                      {product.name}
                     </h3>
-                    <p className="disc para-1">
-                      Collaboratively pontificate bleeding edge resources with
-                      inexpensive methodologies globally initiate multidisciplinary
-                      compatible architectures pidiously repurpose leading edge growth
-                      strategies with just in time web readiness communicate timely
-                      meta services
-                    </p>
-                    <p className="disc">
-                      Onubia semper vel donec torquent fusce mauris felis aptent
-                      lacinia nisl, lectus himenaeos euismod molestie iaculis interdum
-                      in laoreet condimentum dictum, quisque quam risus sollicitudin
-                      gravida ut odio per a et. Gravida maecenas lobortis suscipit mus
-                      sociosqu convallis, mollis vestibulum donec aliquam risus sapien
-                      ridiculus, nulla sollicitudin eget in venenatis. Tortor montes
-                      platea iaculis posuere per mauris, eros porta blandit curabitur
-                      ullamcorper varius
-                    </p>
-                    {/* quote area start */}
-                    <div className="rts-quote-area text-center">
-                      <h5 className="title">
-                        “Placerat pretium tristique mattis tellus accuan metus
-                        dictumst vivamus odio nulla fusce auctor into suscipit
-                        habitasse class congue potenti iaculis”
-                      </h5>
-                      <a href="#" className="name">
-                        Daniel X. Horrar
-                      </a>
-                      <span>Author</span>
-                    </div>
-                    {/* quote area end */}
-                    <p className="disc">
-                      Ultrices iaculis commodo parturient euismod pulvinar donec cum
-                      eget a, accumsan viverra cras praesent cubilia dignissim ad
-                      rhoncus. Gravida maecenas lobortis suscipit mus sociosqu
-                      convallis, mollis vestibulum donec aliquam risus sapien
-                      ridiculus, nulla sollicitudin eget in venenatis. Tortor montes
-                      platea iaculis posuere per mauris, eros porta blandit curabitur
-                      ullamcorper varius, nostra ante risus egestas suscipit. Quisque
-                      interdum nec parturient facilisis nunc ac quam, ad est cubilia
-                      mauris himenaeos nascetur vestibulum.
-                    </p>
-                    <div className="row g-5">
-                      <div className="col-lg-6 col-md-6">
-                        <div className="thumbnail details">
-                          <img
-                            src="/assets/images/blog/d-lg-01.jpg"
-                            alt="elevae construction"
-                          />
-                        </div>
-                      </div>
-                      <div className="col-lg-6 col-md-6">
-                        <div className="thumbnail details">
-                          <img
-                            src="/assets/images/blog/d-lg-02.jpg"
-                            alt="elevae construction"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                    <h4 className="title mt--40 mt_sm--20">
-                      Ultimate Business Strategy Solution
-                    </h4>
-                    <p className="disc mb--25">
-                      Gravida maecenas lobortis suscipit mus sociosqu convallis,
-                      mollis vestibulum donec aliquam risus sapien ridiculus, nulla
-                      sollicitudin eget in venenatis. Tortor montes platea iaculis
-                      posuere per mauris, eros porta blandit curabitur ullamcorper
-                      varius nostra ante risus egestas.
-                    </p>
-                    <div className="row align-items-center">
-                      <div className="col-lg-5">
-                        <div className="thumbnail details mb_sm--15">
-                          <img
-                            src="/assets/images/blog/details/03.jpg"
-                            alt="elevate"
-                          />
-                        </div>
-                      </div>
-                      <div className="col-lg-7">
-                        <div className="check-area-details">
-                          {/* single check */}
-                          <div className="single-check">
-                            <i className="far fa-check-circle" />
-                            <span>How will activities traditional manufacturing</span>
-                          </div>
-                          {/* single check End */}
-                          {/* single check */}
-                          <div className="single-check">
-                            <i className="far fa-check-circle" />
-                            <span>All these digital and projects aim to enhance</span>
-                          </div>
-                          {/* single check End */}
-                          {/* single check */}
-                          <div className="single-check">
-                            <i className="far fa-check-circle" />
-                            <span>I monitor my software that takes screenshots</span>
-                          </div>
-                          {/* single check End */}
-                          {/* single check */}
-                          <div className="single-check">
-                            <i className="far fa-check-circle" />
-                            <span>Laoreet dolore niacin sodium glutimate</span>
-                          </div>
-                          {/* single check End */}
-                          {/* single check */}
-                          <div className="single-check">
-                            <i className="far fa-check-circle" />
-                            <span>Minim veniam sodium glutimate nostrud</span>
-                          </div>
-                          {/* single check End */}
-                        </div>
-                      </div>
-                    </div>
-                    <p className="disc mt--30">
-                      Cubilia hendrerit luctus sem aptent curae gravida maecenas
-                      eleifend nunc nec vitae morbi sodales fusce tristique aenean
-                      habitasse mattis sociis feugiat conubia mus auctor praesent urna
-                      tincidunt taciti dui lobortis nullam. Mattis placerat feugiat
-                      ridiculus sed a per curae fermentum aenean facilisi, vitae urna
-                      imperdiet ac mauris non inceptos luctus hac odio.
-                    </p>
-                    <div className="row  align-items-center">
-                      <div className="col-lg-6 col-md-12">
-                        {/* tags details */}
-                        <div className="details-tag">
-                          <h6>Tags:</h6>
-                          <button>Services</button>
-                          <button>Business</button>
-                          <button>Growth</button>
-                        </div>
-                        {/* tags details End */}
-                      </div>
-                      <div className="col-lg-6 col-md-12">
-                        <div className="details-share">
-                          <h6>Share:</h6>
-                          <button>
-                            <i className="fab fa-facebook-f" />
-                          </button>
-                          <button>
-                            <i className="fab fa-twitter" />
-                          </button>
-                          <button>
-                            <i className="fab fa-instagram" />
-                          </button>
-                          <button>
-                            <i className="fab fa-linkedin-in" />
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="author-area">
-                      <div className="thumbnail details mb_sm--15">
-                        <img
-                          src="/assets/images/blog/details/author.jpg"
-                          alt="finbiz_buseness"
-                        />
-                      </div>
-                      <div className="author-details team">
-                        <span className="desig">Brand Designer</span>
-                        <h5>Angelina H. Dekato</h5>
-                        <p className="disc">
-                          Nullam varius luctus pharetra ultrices volpat facilisis
-                          donec tortor, nibhkisys habitant curabitur at nunc nisl
-                          magna ac rhoncus vehicula sociis tortor nist hendrerit
-                          molestie integer.
+                    {shortDesc ? <p className="disc para-1">{shortDesc}</p> : null}
+                    {longDescParts.length
+                      ? longDescParts.map((text, idx) => (
+                        <p key={`${idx}-${text.slice(0, 12)}`} className="disc">
+                          {text}
                         </p>
-                      </div>
-                    </div>
-                    <div className="comments-area">
-                      <div id="comments-container">
-                        {/* Dynamic comments will appear here */}
-                      </div>
-                    </div>
-                    <div className="replay-area-details">
-                      <h4 className="title">Leave a Reply</h4>
-                      <form id="comment-form">
-                        <div className="row g-4">
-                          <div className="col-lg-6">
-                            <input
-                              type="text"
-                              id="name"
-                              placeholder="Your Name"
-                              required=""
-                            />
-                          </div>
-                          <div className="col-lg-6">
-                            <input
-                              type="text"
-                              id="email"
-                              placeholder="Your Email"
-                              required=""
-                            />
-                          </div>
-                          <div className="col-12">
-                            <input
-                              type="text"
-                              id="topic"
-                              placeholder="Select Topic"
-                            />
-                            <textarea
-                              id="message"
-                              placeholder="Type your message"
-                              required=""
-                              defaultValue={""}
-                            />
-                          </div>
-                          <div className="col-12">
-                            <button className="rts-btn btn-primary" type="submit">
-                              Submit Message
-                            </button>
+                      ))
+                      : null}
+
+                    <div className="row g-3 mt-4">
+                      <div className="col-12 col-md-4">
+                        <div className="card border-0 shadow-sm">
+                          <div className="card-body p-3">
+                            <div className="text-muted small">Product Type</div>
+                            <div className="fw-semibold">Hardware</div>
                           </div>
                         </div>
-                      </form>
+                      </div>
+                      <div className="col-12 col-md-4">
+                        <div className="card border-0 shadow-sm">
+                          <div className="card-body p-3">
+                            <div className="text-muted small">Status</div>
+                            <div className="fw-semibold">{product.status === "inactive" ? "Inactive" : "Active"}</div>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="col-12 col-md-4">
+                        <div className="card border-0 shadow-sm">
+                          <div className="card-body p-3">
+                            <div className="text-muted small">Stock</div>
+                            <div className="fw-semibold">{Number(product.stock || 0)}</div>
+                          </div>
+                        </div>
+                      </div>
                     </div>
+
+                    <style jsx>{`
+                      :global(.productImageSwiper) {
+                        width: 100%;
+                      }
+                      .productImageSlide {
+                        width: 100%;
+                        height: 420px;
+                        border-radius: 14px;
+                        overflow: hidden;
+                        background: #f1f5f9;
+                        border: 1px solid #e2e8f0;
+                      }
+                      .productImageSlide img {
+                        width: 100%;
+                        height: 100%;
+                        object-fit: cover;
+                        display: block;
+                      }
+                      @media (max-width: 768px) {
+                        .productImageSlide {
+                          height: 280px;
+                        }
+                      }
+                    `}</style>
                   </div>
                 </div>
                 {/* single post End*/}
@@ -524,6 +544,258 @@ export default function BlogDetails() {
 
 
 
+      {isOrderOpen ? (
+        <>
+          <div className="modal fade show" role="dialog" aria-modal="true" style={{ display: "block" }}>
+            <div className="modal-dialog modal-dialog-centered modal-xl">
+              <div className="modal-content modalOrder">
+                <div className="modal-header modalOrderHeader">
+                  <div className="d-flex align-items-center gap-3">
+                    <div className="modalOrderIcon" aria-hidden="true">
+                      <i className="fa-solid fa-bag-shopping" />
+                    </div>
+                    <div>
+                      <div className="h5 mb-0">Place your order</div>
+                      <div className="text-muted small">Fill in your details to confirm</div>
+                    </div>
+                  </div>
+                  <button type="button" className="btn-close" aria-label="Close" onClick={closeOrder} disabled={isPlacingOrder} />
+                </div>
+                <form onSubmit={submitOrder}>
+                  <div className="modal-body">
+                    {orderError ? (
+                      <div className="alert alert-danger" role="alert">
+                        {orderError}
+                      </div>
+                    ) : null}
+                    <div className="row g-4">
+                      <div className="col-12 col-lg-7">
+                        <div className="modalSectionTitle mb-3">Customer details</div>
+                        <div className="row g-3">
+                          <div className="col-12 col-md-6">
+                            <label className="form-label fw-semibold">First name</label>
+                            <input
+                              className="form-control"
+                              name="firstName"
+                              value={orderForm.firstName}
+                              onChange={onOrderFieldChange}
+                              placeholder="Enter first name"
+                              required
+                              disabled={isPlacingOrder}
+                            />
+                          </div>
+                          <div className="col-12 col-md-6">
+                            <label className="form-label fw-semibold">Last name</label>
+                            <input
+                              className="form-control"
+                              name="lastName"
+                              value={orderForm.lastName}
+                              onChange={onOrderFieldChange}
+                              placeholder="Enter last name"
+                              required
+                              disabled={isPlacingOrder}
+                            />
+                          </div>
+                          <div className="col-12 col-md-6">
+                            <label className="form-label fw-semibold">Email id</label>
+                            <div className="input-group">
+                              <span className="input-group-text" aria-hidden="true">
+                                <i className="fa-regular fa-envelope" />
+                              </span>
+                              <input
+                                className="form-control"
+                                name="email"
+                                type="email"
+                                value={orderForm.email}
+                                onChange={onOrderFieldChange}
+                                placeholder="name@example.com"
+                                required
+                                disabled={isPlacingOrder}
+                              />
+                            </div>
+                          </div>
+                          <div className="col-12 col-md-6">
+                            <label className="form-label fw-semibold">Contact no</label>
+                            <div className="input-group">
+                              <span className="input-group-text" aria-hidden="true">
+                                <i className="fa-solid fa-phone" />
+                              </span>
+                              <input
+                                className="form-control"
+                                name="contactNo"
+                                type="tel"
+                                value={orderForm.contactNo}
+                                onChange={onOrderFieldChange}
+                                placeholder="Enter contact number"
+                                required
+                                disabled={isPlacingOrder}
+                              />
+                            </div>
+                          </div>
+                          <div className="col-12">
+                            <label className="form-label fw-semibold">Delivery location</label>
+                            <div className="input-group">
+                              <span className="input-group-text" aria-hidden="true">
+                                <i className="fa-solid fa-location-dot" />
+                              </span>
+                              <input
+                                className="form-control"
+                                name="deliveryLocation"
+                                value={orderForm.deliveryLocation}
+                                onChange={onOrderFieldChange}
+                                placeholder="Enter full delivery location"
+                                required
+                                disabled={isPlacingOrder}
+                              />
+                            </div>
+                          </div>
+                          <div className="col-12 col-md-4">
+                            <label className="form-label fw-semibold">Quantity required</label>
+                            <input
+                              className="form-control"
+                              name="quantity"
+                              type="number"
+                              min={1}
+                              step={1}
+                              value={orderForm.quantity}
+                              onChange={onOrderFieldChange}
+                              required
+                              disabled={isPlacingOrder}
+                            />
+                          </div>
+                          <div className="col-12 col-md-8 d-flex align-items-end">
+                            <div className="text-muted small">
+                              By placing the order, you confirm your details are correct.
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="col-12 col-lg-5">
+                        <div className="modalSectionTitle mb-3">Order summary</div>
+                        <div className="card border-0 shadow-sm modalSummaryCard">
+                          <div className="card-body p-3 p-md-4">
+                            <div className="d-flex align-items-center gap-3">
+                              <div className="summaryThumb">
+                                <img
+                                  src={
+                                    sliderImages[0]
+                                  }
+                                  alt={product.name}
+                                />
+                              </div>
+                              <div className="flex-grow-1">
+                                <div className="fw-semibold">{product.name}</div>
+                                <div className="text-muted small">Product Type: Hardware</div>
+                              </div>
+                            </div>
+
+                            <div className="mt-4">
+                              <div className="d-flex justify-content-between mb-2">
+                                <div className="text-muted">Unit price</div>
+                                <div className="fw-semibold">₹{unitPrice.toFixed(2)}</div>
+                              </div>
+                              <div className="d-flex justify-content-between mb-2">
+                                <div className="text-muted">Quantity</div>
+                                <div className="fw-semibold">{qtyNumber}</div>
+                              </div>
+                              <div className="modalDivider my-3" />
+                              <div className="d-flex justify-content-between">
+                                <div className="fw-semibold">Total price</div>
+                                <div className="h5 mb-0">₹{totalPrice.toFixed(2)}</div>
+                              </div>
+                            </div>
+
+                            <div className="d-flex align-items-center justify-content-end gap-2 mt-4 modalActions">
+                              <button
+                                type="button"
+                                className="btn btn-outline-secondary btn-sm px-3"
+                                onClick={closeOrder}
+                                disabled={isPlacingOrder}
+                              >
+                                Cancel
+                              </button>
+                              <button
+                                type="submit"
+                                className="btn btn-primary btn-sm px-3"
+                                disabled={isPlacingOrder}
+                              >
+                                {isPlacingOrder ? "Placing..." : "Place Order"}
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+          <div
+            className="modal-backdrop fade show"
+            onClick={closeOrder}
+            style={{ backgroundColor: "#000", opacity: 0.6 }}
+          />
+          <style jsx>{`
+            :global(.modalOrder) {
+              border-radius: 18px;
+              overflow: hidden;
+            }
+            :global(.modalOrderHeader) {
+              background: linear-gradient(135deg, rgba(13, 110, 253, 0.10), rgba(13, 110, 253, 0));
+              border-bottom: 1px solid rgba(226, 232, 240, 0.9);
+              padding: 18px 20px;
+            }
+            :global(.modalOrderIcon) {
+              width: 44px;
+              height: 44px;
+              border-radius: 14px;
+              background: rgba(13, 110, 253, 0.12);
+              color: #0d6efd;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              font-size: 18px;
+              flex: 0 0 auto;
+            }
+            :global(.modalSectionTitle) {
+              font-weight: 800;
+              letter-spacing: 0.2px;
+            }
+            :global(.modalSummaryCard) {
+              border-radius: 16px;
+            }
+            :global(.summaryThumb) {
+              width: 70px;
+              height: 70px;
+              border-radius: 14px;
+              overflow: hidden;
+              background: #f1f5f9;
+              border: 1px solid #e2e8f0;
+              flex: 0 0 auto;
+            }
+            :global(.summaryThumb img) {
+              width: 100%;
+              height: 100%;
+              object-fit: cover;
+              display: block;
+            }
+            :global(.modalDivider) {
+              height: 1px;
+              background: #e2e8f0;
+            }
+            :global(.modalActions) {
+              flex-wrap: wrap;
+            }
+            @media (max-width: 991px) {
+              :global(.modalOrderHeader) {
+                padding: 16px 16px;
+              }
+            }
+          `}</style>
+        </>
+      ) : null}
 
       <FooterOne />
 

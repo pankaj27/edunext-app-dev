@@ -1,11 +1,41 @@
 "use client";
 import BackToTop from "@/components/common/BackToTop";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import HeaderTwo from "@/components/header/HeaderTwo";
 import FooterOne from "@/components/footer/FooterOne";
-import Software from '@/data/Software.json';
 import BlogGridMain from './BlogGridMain';
 function page() {
+    const [products, setProducts] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState("");
+
+    useEffect(() => {
+        let cancelled = false;
+
+        async function load() {
+            try {
+                setIsLoading(true);
+                setError("");
+                const res = await fetch("/api/products/software", { cache: "no-store" });
+                const json = await res.json().catch(() => null);
+                if (!res.ok || !json || json.ok !== true) {
+                    const message = json?.error || "Failed to load software products";
+                    throw new Error(message);
+                }
+                if (!cancelled) setProducts(Array.isArray(json.data) ? json.data : []);
+            } catch (e) {
+                if (!cancelled) setError(e instanceof Error ? e.message : "Failed to load software products");
+            } finally {
+                if (!cancelled) setIsLoading(false);
+            }
+        }
+
+        load();
+        return () => {
+            cancelled = true;
+        };
+    }, []);
+
     return (
         <>
             <HeaderTwo />
@@ -23,26 +53,45 @@ function page() {
                 </div>
                 <div className="rts-blog-area rts-section-gapTop position-relative">
                     <div className="container">
+                        {error ? (
+                            <div className="row">
+                                <div className="col-12">
+                                    <div className="alert alert-danger mb-0" role="alert">
+                                        {error}
+                                    </div>
+                                </div>
+                            </div>
+                        ) : null}
                         <div className="row g-5">
-                            {Software.map((blog, index) => {
-                                return (
+                            {isLoading
+                                ? Array.from({ length: 6 }).map((_, index) => (
                                     <div key={index} className="col-lg-4 col-md-6 col-sm-12">
                                         <div className="single-blog-area-start border-none">
-                                            {
-                                                <BlogGridMain
-                                                    Slug={blog.slug}
-                                                    blogImage={blog.image}
-                                                    authorImg={blog.authorImg}
-                                                    blogTitle={blog.title}
-                                                    blogAuthor={blog.author}
-                                                    blogPublishedDate={blog.publishedDate}
-                                                    description={blog.descripTion}
-                                                />
-                                            }
+                                            <div className="thumbnail">
+                                                <div style={{ width: "100%", height: 220, background: "#f2f2f2" }} />
+                                            </div>
+                                            <div className="inner-content-area">
+                                                <div className="top-area">
+                                                    <div style={{ height: 18, width: "60%", background: "#f2f2f2" }} />
+                                                    <div style={{ height: 14, width: "90%", background: "#f2f2f2", marginTop: 12 }} />
+                                                    <div style={{ height: 14, width: "70%", background: "#f2f2f2", marginTop: 8 }} />
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
-                                )
-                            })}
+                                ))
+                                : products.map((product) => (
+                                    <div key={product.id} className="col-lg-4 col-md-6 col-sm-12">
+                                        <div className="single-blog-area-start border-none">
+                                            <BlogGridMain
+                                                Slug={product.id}
+                                                blogImage={(Array.isArray(product.images) ? product.images[0] : "") || ""}
+                                                blogTitle={product.name}
+                                                description={product.shortDesc || product.longDesc}
+                                            />
+                                        </div>
+                                    </div>
+                                ))}
                             {/* }).slice(0, 6)} */}
                         </div>
                         {/* <div className="row mt--50">

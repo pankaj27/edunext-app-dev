@@ -1,0 +1,20 @@
+[
+  {
+    "id": 1,
+    "productType": "hardware",
+    "productId": 1,
+    "productName": "Test Hardware",
+    "productThumbnailDataUrl": "",
+    "unitPrice": 10.5,
+    "quantity": 2,
+    "totalPrice": 21,
+    "firstName": "Test",
+    "lastName": "User",
+    "email": "test@example.com",
+    "contactNo": "9999999999",
+    "deliveryLocation": "Test City",
+    "status": "pending",
+    "createdAt": "2025-12-29T16:11:50.946Z",
+    "updatedAt": "2025-12-29T16:11:50.946Z"
+  }
+]

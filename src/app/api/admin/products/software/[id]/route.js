@@ -94,6 +94,11 @@ async function ensureTable() {
   `;
 }
 
+async function readParamId(params) {
+  const resolved = await Promise.resolve(params);
+  return Number(resolved?.id);
+}
+
 function normalizeText(value) {
   const v = typeof value === "string" ? value.trim() : "";
   return v.length ? v : "";
@@ -173,7 +178,7 @@ export async function PUT(request, { params }) {
   const unauthorized = await requireAdminSession();
   if (unauthorized) return unauthorized;
 
-  const id = Number(params?.id);
+  const id = await readParamId(params);
   if (!Number.isFinite(id) || id <= 0) {
     return NextResponse.json({ ok: false, error: "Invalid product id" }, { status: 400 });
   }
@@ -310,7 +315,7 @@ export async function DELETE(request, { params }) {
   const unauthorized = await requireAdminSession();
   if (unauthorized) return unauthorized;
 
-  const id = Number(params?.id);
+  const id = await readParamId(params);
   if (!Number.isFinite(id) || id <= 0) {
     return NextResponse.json({ ok: false, error: "Invalid product id" }, { status: 400 });
   }
