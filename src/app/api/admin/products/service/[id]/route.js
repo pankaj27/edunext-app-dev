@@ -2,12 +2,34 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import crypto from "crypto";
 import { sql } from "@vercel/postgres";
+import fs from "fs/promises";
+import path from "path";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 function hasPostgresConfig() {
   return Boolean(process.env.POSTGRES_URL || process.env.POSTGRES_URL_NON_POOLING || process.env.DATABASE_URL);
+}
+
+function localDbPath() {
+  return path.join(process.cwd(), ".localdb", "service_products.json");
+}
+
+async function readLocalProducts() {
+  try {
+    const json = await fs.readFile(localDbPath(), "utf8");
+    const data = JSON.parse(json);
+    return Array.isArray(data) ? data : [];
+  } catch {
+    return [];
+  }
+}
+
+async function writeLocalProducts(products) {
+  const filePath = localDbPath();
+  await fs.mkdir(path.dirname(filePath), { recursive: true });
+  await fs.writeFile(filePath, JSON.stringify(products, null, 2), "utf8");
 }
 
 function timingSafeEqual(a, b) {
@@ -157,12 +179,56 @@ export async function PUT(request, { params }) {
   }
 
   try {
-    if (!hasPostgresConfig()) {
-      return NextResponse.json({ ok: false, error: "Database not configured" }, { status: 500 });
-    }
-
     const body = await request.json().catch(() => null);
     const incoming = body && typeof body === "object" ? body : {};
+
+    if (!hasPostgresConfig()) {
+      if (process.env.NODE_ENV === "production") {
+        return NextResponse.json({ ok: false, error: "Database not configured" }, { status: 500 });
+      }
+      const products = await readLocalProducts();
+      const idx = products.findIndex((p) => Number(p?.id) === id);
+      if (idx === -1) return NextResponse.json({ ok: false, error: "Not found" }, { status: 404 });
+
+      const existing = products[idx] && typeof products[idx] === "object" ? products[idx] : {};
+      const name = hasOwn(incoming, "name") ? normalizeText(incoming.name) : normalizeText(existing.name);
+      if (!name) return NextResponse.json({ ok: false, error: "Product name is required" }, { status: 400 });
+
+      const shortDesc = hasOwn(incoming, "shortDesc") ? normalizeText(incoming.shortDesc) : normalizeText(existing.shortDesc);
+      const longDesc = hasOwn(incoming, "longDesc") ? normalizeText(incoming.longDesc) : normalizeText(existing.longDesc);
+      const incomingThumb = hasOwn(incoming, "thumbnailDataUrl")
+        ? incoming.thumbnailDataUrl
+        : hasOwn(incoming, "thumbnail")
+          ? incoming.thumbnail
+          : undefined;
+      const thumbnailDataUrl =
+        incomingThumb === undefined
+          ? normalizeDataUrl(existing.thumbnailDataUrl || existing.thumbnail_data_url || existing.thumbnail)
+          : normalizeDataUrl(incomingThumb);
+      const images = hasOwn(incoming, "images") ? parseImagesFromUnknown(incoming.images) : parseImagesFromUnknown(existing.images || existing.images_json);
+      const price = hasOwn(incoming, "price") ? normalizeNumber(incoming.price) : normalizeNumber(existing.price);
+      const total = hasOwn(incoming, "total") ? normalizeNumber(incoming.total) : normalizeNumber(existing.total);
+      const stock = hasOwn(incoming, "stock") ? normalizeInt(incoming.stock) : normalizeInt(existing.stock);
+      const status = hasOwn(incoming, "status") ? normalizeStatus(incoming.status) : normalizeStatus(existing.status);
+
+      const now = new Date().toISOString();
+      const updated = {
+        ...products[idx],
+        name,
+        shortDesc,
+        longDesc,
+        thumbnailDataUrl,
+        images,
+        price,
+        total,
+        stock,
+        status,
+        updatedAt: now,
+      };
+      products[idx] = updated;
+      await writeLocalProducts(products);
+      return NextResponse.json({ ok: true, data: updated });
+    }
 
     await ensureTable();
     const { rows: existingRows } = await sql`
@@ -251,7 +317,14 @@ export async function DELETE(request, { params }) {
 
   try {
     if (!hasPostgresConfig()) {
-      return NextResponse.json({ ok: false, error: "Database not configured" }, { status: 500 });
+      if (process.env.NODE_ENV === "production") {
+        return NextResponse.json({ ok: false, error: "Database not configured" }, { status: 500 });
+      }
+      const products = await readLocalProducts();
+      const next = products.filter((p) => Number(p?.id) !== id);
+      if (next.length === products.length) return NextResponse.json({ ok: false, error: "Not found" }, { status: 404 });
+      await writeLocalProducts(next);
+      return NextResponse.json({ ok: true });
     }
 
     await ensureTable();

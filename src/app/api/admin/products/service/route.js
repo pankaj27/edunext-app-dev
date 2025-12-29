@@ -2,12 +2,34 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import crypto from "crypto";
 import { sql } from "@vercel/postgres";
+import fs from "fs/promises";
+import path from "path";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 function hasPostgresConfig() {
   return Boolean(process.env.POSTGRES_URL || process.env.POSTGRES_URL_NON_POOLING || process.env.DATABASE_URL);
+}
+
+function localDbPath() {
+  return path.join(process.cwd(), ".localdb", "service_products.json");
+}
+
+async function readLocalProducts() {
+  try {
+    const json = await fs.readFile(localDbPath(), "utf8");
+    const data = JSON.parse(json);
+    return Array.isArray(data) ? data : [];
+  } catch {
+    return [];
+  }
+}
+
+async function writeLocalProducts(products) {
+  const filePath = localDbPath();
+  await fs.mkdir(path.dirname(filePath), { recursive: true });
+  await fs.writeFile(filePath, JSON.stringify(products, null, 2), "utf8");
 }
 
 function timingSafeEqual(a, b) {
@@ -108,6 +130,35 @@ function normalizeImages(value) {
   return value.map(normalizeDataUrl).filter(Boolean);
 }
 
+function parseImagesFromUnknown(value) {
+  if (Array.isArray(value)) return normalizeImages(value);
+  if (typeof value === "string" && value.trim()) {
+    try {
+      const parsed = JSON.parse(value);
+      if (Array.isArray(parsed)) return normalizeImages(parsed);
+    } catch {}
+  }
+  return [];
+}
+
+function mapLocalProduct(p) {
+  const obj = p && typeof p === "object" ? p : {};
+  return {
+    id: Number(obj.id) || 0,
+    name: normalizeText(obj.name),
+    shortDesc: normalizeText(obj.shortDesc || obj.short_desc),
+    longDesc: normalizeText(obj.longDesc || obj.long_desc),
+    thumbnailDataUrl: normalizeDataUrl(obj.thumbnailDataUrl || obj.thumbnail_data_url || obj.thumbnail),
+    images: parseImagesFromUnknown(obj.images || obj.images_json),
+    price: normalizeNumber(obj.price),
+    total: normalizeNumber(obj.total),
+    stock: normalizeInt(obj.stock),
+    status: normalizeStatus(obj.status),
+    createdAt: typeof obj.createdAt === "string" ? obj.createdAt : typeof obj.created_at === "string" ? obj.created_at : "",
+    updatedAt: typeof obj.updatedAt === "string" ? obj.updatedAt : typeof obj.updated_at === "string" ? obj.updated_at : "",
+  };
+}
+
 function mapRow(row) {
   let images = [];
   try {
@@ -138,7 +189,8 @@ export async function GET() {
 
   try {
     if (!hasPostgresConfig()) {
-      return NextResponse.json({ ok: false, error: "Database not configured" }, { status: 500 });
+      const products = await readLocalProducts();
+      return NextResponse.json({ ok: true, data: products.map(mapLocalProduct).filter((p) => p.id > 0) });
     }
 
     await ensureTable();
@@ -170,10 +222,6 @@ export async function POST(request) {
   if (unauthorized) return unauthorized;
 
   try {
-    if (!hasPostgresConfig()) {
-      return NextResponse.json({ ok: false, error: "Database not configured" }, { status: 500 });
-    }
-
     const body = await request.json().catch(() => null);
     const name = normalizeText(body?.name);
     if (!name) return NextResponse.json({ ok: false, error: "Product name is required" }, { status: 400 });
@@ -186,6 +234,32 @@ export async function POST(request) {
     const total = normalizeNumber(body?.total);
     const stock = normalizeInt(body?.stock);
     const status = normalizeStatus(body?.status);
+
+    if (!hasPostgresConfig()) {
+      if (process.env.NODE_ENV === "production") {
+        return NextResponse.json({ ok: false, error: "Database not configured" }, { status: 500 });
+      }
+      const products = await readLocalProducts();
+      const now = new Date().toISOString();
+      const nextId = products.reduce((m, p) => Math.max(m, Number(p?.id) || 0), 0) + 1;
+      const product = {
+        id: nextId,
+        name,
+        shortDesc,
+        longDesc,
+        thumbnailDataUrl,
+        images,
+        price,
+        total,
+        stock,
+        status,
+        createdAt: now,
+        updatedAt: now,
+      };
+      products.unshift(product);
+      await writeLocalProducts(products);
+      return NextResponse.json({ ok: true, data: product }, { status: 201 });
+    }
 
     await ensureTable();
     const imagesJson = JSON.stringify(images);
