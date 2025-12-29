@@ -66,6 +66,10 @@ function appName() {
   return v || "EduNextG";
 }
 
+function shouldLogEmail() {
+  return process.env.NODE_ENV !== "production";
+}
+
 function transport() {
   if (!hasSmtpConfig()) return null;
   return nodemailer.createTransport({
@@ -214,8 +218,8 @@ async function sendOrderConfirmationEmail(order) {
     ...(replyTo ? { replyTo } : {}),
   };
 
-  await t.sendMail(message);
-  return { ok: true };
+  const info = await t.sendMail(message);
+  return { ok: true, info };
 }
 
 function normalizeInt(value, { min = 0 } = {}) {
@@ -409,7 +413,14 @@ export async function POST(request) {
       orders.unshift(order);
       await writeLocalOrders(orders);
       try {
-        await sendOrderConfirmationEmail(order);
+        const result = await sendOrderConfirmationEmail(order);
+        if (shouldLogEmail()) {
+          if (result?.ok)
+            console.info(
+              `Order email sent ${JSON.stringify({ orderId: order.id, to: order.email, messageId: result?.info?.messageId || "" })}`
+            );
+          else if (result?.skipped) console.info(`Order email skipped ${JSON.stringify({ orderId: order.id, to: order.email, reason: result?.reason })}`);
+        }
       } catch (e) {
         console.error("Order email failed", e instanceof Error ? e.message : e);
       }
@@ -490,7 +501,12 @@ export async function POST(request) {
     };
 
     try {
-      await sendOrderConfirmationEmail(data);
+      const result = await sendOrderConfirmationEmail(data);
+      if (shouldLogEmail()) {
+        if (result?.ok)
+          console.info(`Order email sent ${JSON.stringify({ orderId: data.id, to: data.email, messageId: result?.info?.messageId || "" })}`);
+        else if (result?.skipped) console.info(`Order email skipped ${JSON.stringify({ orderId: data.id, to: data.email, reason: result?.reason })}`);
+      }
     } catch (e) {
       console.error("Order email failed", e instanceof Error ? e.message : e);
     }
