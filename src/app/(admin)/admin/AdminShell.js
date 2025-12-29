@@ -178,7 +178,7 @@ export default function AdminShell({ children, email }) {
 
         <div className="crumbs">
           {breadcrumbs.map((b, idx) => (
-            <div key={b.href} className="crumb">
+            <div key={`${b.href}-${idx}`} className="crumb">
               <Link href={b.href} className={`crumbLink ${idx === breadcrumbs.length - 1 ? "current" : ""}`}>
                 {b.label}
               </Link>
@@ -503,4 +503,3 @@ export default function AdminShell({ children, email }) {
     </div>
   );
 }
-
