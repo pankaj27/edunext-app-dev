@@ -1,0 +1,173 @@
+[
+    {
+        "id": 1,
+        "slug": "curtridge",
+        "image": "01.webp",
+        "bannerImg": "/assets/images/blog/01.webp",
+        "category": "Business Solution",
+        "title": "Curtridge",
+        "descripTion": "A container holding a spool of photographic film, a quantity of ink, etc., designed for insertion into a mechanism."
+    },
+    {
+        "id": 2,
+        "slug": "flat-panel",
+        "image": "01.webp",
+        "bannerImg": "/assets/images/blog/01.webp",
+        "category": "Business Solution",
+        "title": "Flat Panel",
+        "descripTion": "An Interactive Flat-Panel Display (IFPD) is a large-format touchscreen display ideal for meeting rooms ."
+    },
+    {
+        "id": 3,
+        "slug": "display",
+        "image": "01.webp",
+        "bannerImg": "/assets/images/blog/01.webp",
+        "category": "Business Solution",
+        "title": "Display",
+        "descripTion": "A display screen means the display part of a monitor."
+    },
+    {
+        "id": 4,
+        "slug": "projector",
+        "image": "01.webp",
+        "bannerImg": "/assets/images/blog/01.webp",
+        "category": "Business Solution",
+        "title": "Projector",
+        "descripTion": "All kinds of IT Products."
+    },
+    {
+        "id": 5,
+        "slug": "digital-podium",
+        "image": "01.webp",
+        "bannerImg": "/assets/images/blog/01.webp",
+        "category": "Business Solution",
+        "title": "Digital Podium",
+        "descripTion": "Digital Podium is a combination of Touch Screen Monitor, Audio System, Wireless Keyboard & Mouse with Back up."
+    },
+    {
+        "id": 6,
+        "slug": "digital-notice-board",
+        "image": "01.webp",
+        "bannerImg": "/assets/images/blog/01.webp",
+        "category": "Business Solution",
+        "title": "Digital Notice Board",
+        "descripTion": "Digital Podium is a combination of Touch Screen Monitor, Audio System, Wireless Keyboard & Mouse with Back up."
+    },
+    {
+        "id": 7,
+        "slug": "lab-solution",
+        "image": "01.webp",
+        "bannerImg": "/assets/images/blog/01.webp",
+        "category": "Business Solution",
+        "title": "Lab Solution",
+        "descripTion": "The lab is a room or building with scientific equipment for doing scientific tests or for teaching science and also computer."
+    },
+    {
+        "id": 8,
+        "slug": "student-id-card",
+        "image": "01.webp",
+        "bannerImg": "/assets/images/blog/01.webp",
+        "category": "Business Solution",
+        "title": "Student ID Card",
+        "descripTion": "ID Card is an identification document certifying the status of a student."
+    },
+    {
+        "id": 9,
+        "slug": "surveillance-system",
+        "image": "01.webp",
+        "bannerImg": "/assets/images/blog/01.webp",
+        "category": "Business Solution",
+        "title": "Surveillance System",
+        "descripTion": "The surveillance system is a closed-circuit television system used to maintain close observation of a person or group."
+    },
+    {
+        "id": 10,
+        "slug": "school-dress-kit",
+        "image": "01.webp",
+        "bannerImg": "/assets/images/blog/01.webp",
+        "category": "Business Solution",
+        "title": "School Dress Kit",
+        "descripTion": "A school uniform is a uniform worn by students primarily for a school or otherwise educational institution."
+    },
+    {
+        "id": 11,
+        "slug": "school-management-system",
+        "image": "01.webp",
+        "bannerImg": "/assets/images/blog/01.webp",
+        "category": "Business Solution",
+        "title": "School Management System",
+        "descripTion": "ERP System is the best management system to contains various features to effectively record, manage, process data for school."
+    },
+    {
+        "id": 12,
+        "slug": "networking-solution",
+        "image": "01.webp",
+        "bannerImg": "/assets/images/blog/01.webp",
+        "category": "Business Solution",
+        "title": "Networking Solution",
+        "descripTion": "Networking Solution help our clients in maximizing the value of current network infrastructure by analyzing network approache."
+    },
+    {
+        "id": 13,
+        "slug": "school-desk-branch",
+        "image": "01.webp",
+        "bannerImg": "/assets/images/blog/01.webp",
+        "category": "Business Solution",
+        "title": "School Desk Branch",
+        "descripTion": "A school desk or bureau is a piece of furniture with a flat table-style work surface used in a school, office, home, etc."
+    },
+    {
+        "id": 14,
+        "slug": "speech-table",
+        "image": "01.webp",
+        "bannerImg": "/assets/images/blog/01.webp",
+        "category": "Business Solution",
+        "title": "Speech Table",
+        "descripTion": "Speech Table is a futuristic device that amps up your learning experience by several notches."
+    },
+    {
+        "id": 15,
+        "slug": "school-stationary",
+        "image": "01.webp",
+        "bannerImg": "/assets/images/blog/01.webp",
+        "category": "Business Solution",
+        "title": "School Stationary",
+        "descripTion": "Stationery is a mass noun referring to commercially manufactured writing materials, including cut paper, envelopes, etc."
+    },
+    {
+        "id": 16,
+        "slug": "conference-room",
+        "image": "01.webp",
+        "bannerImg": "/assets/images/blog/01.webp",
+        "category": "Business Solution",
+        "title": "Conference Room",
+        "descripTion": "When organising your conference, you’ll have lots of options as to the types of meeting rooms to use."
+    },
+    {
+        "id": 17,
+        "slug": "virtual-classroom",
+        "image": "01.webp",
+        "bannerImg": "/assets/images/blog/01.webp",
+        "category": "Business Solution",
+        "title": "Virtual Classroom",
+        "descripTion": "A virtual classroom is a teaching and learning environment where participants can interact, communicate, view and discuss."
+    },
+    {
+        "id": 18,
+        "slug": "digital-classroom",
+        "image": "01.webp",
+        "bannerImg": "/assets/images/blog/01.webp",
+        "category": "Business Solution",
+        "title": "Digital Classroom",
+        "descripTion": "Digital classrooms prepare students for life in college and the real world by providing them a technology-based education."
+    },
+    {
+        "id": 19,
+        "slug": "digital-attendance-system",
+        "image": "01.webp",
+        "bannerImg": "/assets/images/blog/01.webp",
+        "category": "Business Solution",
+        "title": "Digital Attendance System",
+        "descripTion": "RFID is an electronic device that includes a small antenna and a chip."
+    }
+]

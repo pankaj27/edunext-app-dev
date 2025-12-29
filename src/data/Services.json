@@ -1,0 +1,47 @@
+[
+    {
+        "id": 1,
+        "slug": "government",
+        "image": "01.webp",
+        "bannerImg": "/assets/images/blog/01.webp",
+        "category": "Business Solution",
+        "title": "Government",
+        "descripTion": "EduNextG will provide services on all types of electronic products and IT products in the Government Department."
+    },
+    {
+        "id": 2,
+        "slug": "corporate",
+        "image": "01.webp",
+        "bannerImg": "/assets/images/blog/01.webp",
+        "category": "Business Solution",
+        "title": "Corporate",
+        "descripTion": "EduNextG will provide services on all types of electronic products and IT products in all types of Private Sectors."
+    },
+    {
+        "id": 3,
+        "slug": "on-site-service",
+        "image": "01.webp",
+        "bannerImg": "/assets/images/blog/01.webp",
+        "category": "Business Solution",
+        "title": "On Site Service",
+        "descripTion": "EduNextG will provide services on all types of electronic products and IT products at your current location."
+    },
+    {
+        "id": 4,
+        "slug": "on-call-service-for-home",
+        "image": "01.webp",
+        "bannerImg": "/assets/images/blog/01.webp",
+        "category": "Business Solution",
+        "title": "On Call Service For Home",
+        "descripTion": "EduNextG will provide services on all types of electronic products and IT products at your doorstep as per your requirements."
+    },
+    {
+        "id": 5,
+        "slug": "educational-institute",
+        "image": "01.webp",
+        "bannerImg": "/assets/images/blog/01.webp",
+        "category": "Business Solution",
+        "title": "Educational institute",
+        "descripTion": "EduNextG will provide services on all types of electronic products and IT products in the Educational Institute."
+    }
+]

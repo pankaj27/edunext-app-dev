@@ -1,0 +1,31 @@
+{
+  "name": "luminos-next",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint \"src/app/(admin)\" \"src/app/(admin-public)\" \"src/app/api/admin\" \"middleware.js\" --max-warnings 0"
+  },
+  "dependencies": {
+    "@emailjs/browser": "^4.4.1",
+    "aos": "^2.3.4",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^5.2.1",
+    "next": "^16.0.10",
+    "nodemailer": "^7.0.11",
+    "react": "^19.2.3",
+    "react-bootstrap": "^2.10.6",
+    "react-dom": "^19.2.3",
+    "react-modal-video": "^2.0.2",
+    "react-svg": "^16.2.0",
+    "rellax": "^1.12.1",
+    "swiper": "^11.1.15"
+  },
+  "devDependencies": {
+    "eslint": "^8",
+    "eslint-config-next": "15.0.4"
+  }
+}
