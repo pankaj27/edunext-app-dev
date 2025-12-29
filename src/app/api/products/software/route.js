@@ -43,60 +43,38 @@ async function ensureTable() {
   `;
 }
 
-function normalizeStatus(value) {
-  return value === "inactive" ? "inactive" : "active";
-}
-
-function normalizeNumber(value) {
-  if (typeof value === "number" && Number.isFinite(value)) return value;
-  if (typeof value === "string" && value.trim().length) {
-    const n = Number(value);
-    if (Number.isFinite(n)) return n;
-  }
-  return 0;
-}
-
-function normalizeDataUrl(value) {
-  const v = typeof value === "string" ? value.trim() : "";
-  if (!v) return "";
-  if (!v.startsWith("data:")) return "";
-  return v;
-}
-
-function normalizeImages(value) {
-  if (Array.isArray(value)) return value.map(normalizeDataUrl).filter(Boolean);
-  if (typeof value === "string" && value.trim()) {
-    try {
-      const parsed = JSON.parse(value);
-      if (Array.isArray(parsed)) return parsed.map(normalizeDataUrl).filter(Boolean);
-    } catch {}
-  }
-  return [];
-}
-
-function mapLocalProduct(p) {
-  const obj = p && typeof p === "object" ? p : {};
-  return {
-    id: Number(obj.id) || 0,
-    name: typeof obj.name === "string" ? obj.name : "",
-    shortDesc: typeof obj.shortDesc === "string" ? obj.shortDesc : typeof obj.short_desc === "string" ? obj.short_desc : "",
-    longDesc: typeof obj.longDesc === "string" ? obj.longDesc : typeof obj.long_desc === "string" ? obj.long_desc : "",
-    thumbnailDataUrl: normalizeDataUrl(obj.thumbnailDataUrl || obj.thumbnail_data_url || obj.thumbnail),
-    images: normalizeImages(obj.images || obj.images_json),
-    price: normalizeNumber(obj.price),
-    total: normalizeNumber(obj.total),
-    stock: Number.isFinite(Number(obj.stock)) ? Math.max(0, Math.trunc(Number(obj.stock))) : 0,
-    status: normalizeStatus(obj.status),
-    createdAt: typeof obj.createdAt === "string" ? obj.createdAt : typeof obj.created_at === "string" ? obj.created_at : "",
-    updatedAt: typeof obj.updatedAt === "string" ? obj.updatedAt : typeof obj.updated_at === "string" ? obj.updated_at : "",
-  };
-}
 
 export async function GET() {
   try {
     if (!hasPostgresConfig()) {
       const local = await readLocalDb();
-      const active = local.map(mapLocalProduct).filter((p) => p.id > 0 && p.status === "active");
+      const active = local
+        .map((p) => {
+          const obj = p && typeof p === "object" ? p : {};
+          return {
+            id: Number(obj.id) || 0,
+            name: typeof obj.name === "string" ? obj.name : "",
+            shortDesc:
+              typeof obj.shortDesc === "string" ? obj.shortDesc : typeof obj.short_desc === "string" ? obj.short_desc : "",
+            longDesc: typeof obj.longDesc === "string" ? obj.longDesc : typeof obj.long_desc === "string" ? obj.long_desc : "",
+            thumbnailDataUrl:
+              typeof obj.thumbnailDataUrl === "string"
+                ? obj.thumbnailDataUrl
+                : typeof obj.thumbnail_data_url === "string"
+                  ? obj.thumbnail_data_url
+                  : typeof obj.thumbnail === "string"
+                    ? obj.thumbnail
+                    : "",
+            images: Array.isArray(obj.images) ? obj.images : Array.isArray(obj.images_json) ? obj.images_json : [],
+            price: Number(obj.price) || 0,
+            total: Number(obj.total) || 0,
+            stock: Number.isFinite(Number(obj.stock)) ? Math.max(0, Math.trunc(Number(obj.stock))) : 0,
+            status: obj.status === "inactive" ? "inactive" : "active",
+            createdAt: typeof obj.createdAt === "string" ? obj.createdAt : typeof obj.created_at === "string" ? obj.created_at : "",
+            updatedAt: typeof obj.updatedAt === "string" ? obj.updatedAt : typeof obj.updated_at === "string" ? obj.updated_at : "",
+          };
+        })
+        .filter((p) => p.id > 0 && p.status === "active");
       return NextResponse.json({ ok: true, data: active });
     }
 
@@ -149,4 +127,3 @@ export async function GET() {
     return NextResponse.json({ ok: false, error: "Failed to load software products" }, { status: 500 });
   }
 }
-
