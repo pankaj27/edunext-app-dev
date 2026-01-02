@@ -440,6 +440,61 @@ export default function Page() {
         .hardware {
           max-width: 1200px;
         }
+        /* Enhanced Form Styles */
+        .form-control,
+        .form-select {
+          font-size: 16px;
+          padding: 12px 16px;
+          border-radius: 12px;
+          border: 1px solid #cbd5e1;
+          background-color: #fff;
+          box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+          transition: all 0.2s ease;
+        }
+        .form-control:focus,
+        .form-select:focus {
+          border-color: #6366f1;
+          box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+          outline: none;
+        }
+        .form-control::placeholder {
+          color: #94a3b8;
+        }
+        .form-label {
+          margin-bottom: 8px;
+          color: #475569;
+          font-weight: 600;
+          font-size: 14px;
+        }
+        /* Enhanced Button Styles */
+        .btn {
+          padding: 10px 24px;
+          border-radius: 10px;
+          font-weight: 600;
+          font-size: 15px;
+          transition: all 0.2s ease;
+        }
+        .btn-primary {
+          background-color: #4f46e5;
+          border-color: #4f46e5;
+          box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.1), 0 2px 4px -1px rgba(79, 70, 229, 0.06);
+        }
+        .btn-primary:hover {
+          background-color: #4338ca;
+          border-color: #4338ca;
+          transform: translateY(-1px);
+          box-shadow: 0 6px 8px -1px rgba(79, 70, 229, 0.15), 0 3px 6px -1px rgba(79, 70, 229, 0.1);
+        }
+        .btn-outline-secondary {
+          border: 1px solid #cbd5e1;
+          color: #475569;
+        }
+        .btn-outline-secondary:hover {
+          background-color: #f1f5f9;
+          border-color: #94a3b8;
+          color: #1e293b;
+          transform: translateY(-1px);
+        }
         .longDesc {
           resize: vertical;
         }

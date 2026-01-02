@@ -41,7 +41,7 @@ function ServiceFive() {
                     <img src="assets/images/service/icons/23.svg" alt="service" />
                     </div>
                     <div className="info">
-                    <h4 className="title">Curtridge</h4>
+                    <h4 className="title">Cartridge</h4>
                     <ReactSVG
                         src="assets/images/service/icons/13.svg"
                         alt="service"
@@ -234,7 +234,7 @@ function ServiceFive() {
                     <img src="assets/images/service/icons/26.svg" alt="service" />
                     </div>
                     <div className="info">
-                    <h4 className="title">Digital Attendace System</h4>
+                    <h4 className="title">Digital Attendance System</h4>
                     <ReactSVG
                         src="assets/images/service/icons/13.svg"
                         alt="service"

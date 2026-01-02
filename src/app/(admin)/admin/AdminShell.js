@@ -25,10 +25,12 @@ function NavGroup({ iconClass, label, open, onToggle, children, active }) {
         </span>
         <span className="navLabel">{label}</span>
         <span className="navChevron" aria-hidden="true">
-          <i className={`fa-solid ${open ? "fa-chevron-down" : "fa-chevron-right"}`} />
+          <i className="fa-solid fa-chevron-right" />
         </span>
       </button>
-      <div className="navSub">{children}</div>
+      <div className="navSub">
+        <div className="navSubInner">{children}</div>
+      </div>
     </div>
   );
 }
@@ -41,13 +43,19 @@ export default function AdminShell({ children, email }) {
   const isSettingsActive = pathname.startsWith("/admin/settings");
   const isDashboardActive = pathname === "/admin";
 
+  // Initialize state based on current path to ensure correct initial expansion
   const [productsOpen, setProductsOpen] = useState(false);
   const [ordersOpen, setOrdersOpen] = useState(false);
 
+  // Sync state with path changes
   useEffect(() => {
     if (isProductsActive) setProductsOpen(true);
+    // else setProductsOpen(false); // Optional: auto-close if navigating away? keeping it manual is usually better UX
+  }, [isProductsActive]);
+
+  useEffect(() => {
     if (isOrdersActive) setOrdersOpen(true);
-  }, [isProductsActive, isOrdersActive]);
+  }, [isOrdersActive]);
 
   const breadcrumbs = useMemo(() => {
     const parts = pathname.split("/").filter(Boolean);
@@ -70,11 +78,13 @@ export default function AdminShell({ children, email }) {
         <div className="brand">
           <Link href="/admin" className="brandLink">
             <Image src="/assets/images/logo/onlylogo.png" alt="EduNextG" width={28} height={28} />
-            <span className="brandText">EduNextG</span>
+            <span className="brandText">   </span>
+            <Image src="/assets/images/logo/edunextg-logo.png" alt="EduNextG" width={140} height={28} />
           </Link>
         </div>
 
         <nav className="nav">
+          {/* 1. Dashboard Button */}
           <NavItem
             href="/admin"
             iconClass="fa-solid fa-gauge"
@@ -82,6 +92,7 @@ export default function AdminShell({ children, email }) {
             active={isDashboardActive}
           />
 
+          {/* 2. Products Button (Expandable) */}
           <NavGroup
             iconClass="fa-solid fa-boxes-stacked"
             label="Products"
@@ -109,6 +120,7 @@ export default function AdminShell({ children, email }) {
             />
           </NavGroup>
 
+          {/* 3. Order Button (Expandable) */}
           <NavGroup
             iconClass="fa-solid fa-bag-shopping"
             label="Order"
@@ -130,6 +142,7 @@ export default function AdminShell({ children, email }) {
             />
           </NavGroup>
 
+          {/* 4. Website Settings Button */}
           <NavItem
             href="/admin/settings"
             iconClass="fa-solid fa-gear"
@@ -201,22 +214,34 @@ export default function AdminShell({ children, email }) {
           width: 270px;
           background: #0b6f6c;
           color: #eaf7f7;
-          padding: 16px 12px;
+          padding: 20px 16px;
           position: sticky;
           top: 0;
           height: 100vh;
-          overflow: auto;
+          overflow-y: auto;
+          box-shadow: 4px 0 24px rgba(0,0,0,0.02);
+          transition: width 0.3s ease;
+          z-index: 50;
+        }
+        
+        .sidebar::-webkit-scrollbar {
+          width: 5px;
+        }
+        .sidebar::-webkit-scrollbar-thumb {
+          background: rgba(255, 255, 255, 0.2);
+          border-radius: 3px;
         }
 
         .brand {
-          padding: 6px 8px 14px;
-          margin-bottom: 10px;
+          padding: 0 8px 24px;
+          margin-bottom: 8px;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }
 
         .brandLink {
           display: flex;
           align-items: center;
-          gap: 10px;
+          gap: 12px;
           text-decoration: none;
           color: #ffffff;
           font-weight: 800;
@@ -230,87 +255,182 @@ export default function AdminShell({ children, email }) {
         .nav {
           display: flex;
           flex-direction: column;
-          gap: 6px;
+          gap: 8px;
         }
 
         :global(.navItem) {
           display: flex;
           align-items: center;
-          gap: 10px;
-          padding: 10px 10px;
-          border-radius: 10px;
+          gap: 12px;
+          padding: 14px 16px; /* Increased padding */
+          border-radius: 12px;
           text-decoration: none;
-          color: rgba(255, 255, 255, 0.9);
-          font-weight: 600;
+          color: rgba(255, 255, 255, 0.85);
+          font-weight: 500;
           font-size: 14px;
+          transition: all 0.2s ease;
+          border-left: 3px solid transparent;
+          position: relative;
+          overflow: hidden;
         }
 
         :global(.navItem:hover) {
-          background: rgba(255, 255, 255, 0.12);
+          background: rgba(255, 255, 255, 0.1);
           color: #ffffff;
+          padding-left: 20px;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.05);
         }
 
         :global(.navItem.active) {
-          background: rgba(255, 255, 255, 0.16);
+          background: linear-gradient(90deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.1) 100%); /* Gradient background */
           color: #ffffff;
+          border-left-color: #ffffff;
+          font-weight: 600;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.05);
         }
 
         .navIcon {
-          width: 22px;
+          width: 24px; /* Slightly larger icon area */
           display: inline-flex;
           justify-content: center;
-          opacity: 0.95;
+          opacity: 0.9;
+          font-size: 16px;
         }
 
         .navGroup {
           border-radius: 12px;
+          transition: all 0.2s ease;
+          overflow: hidden; /* Contain children */
+        }
+        
+        .navGroup.open {
+           background: rgba(0, 0, 0, 0.08); /* Darken expanded group background */
         }
 
         .navGroupBtn {
           width: 100%;
           display: flex;
           align-items: center;
-          gap: 10px;
-          padding: 10px 10px;
+          gap: 12px;
+          padding: 14px 16px; /* Increased padding matching navItems */
           border: 0;
           background: transparent;
-          color: rgba(255, 255, 255, 0.9);
-          border-radius: 10px;
-          font-weight: 700;
+          color: rgba(255, 255, 255, 0.85);
+          border-radius: 12px;
+          font-weight: 500;
           font-size: 14px;
           cursor: pointer;
+          transition: all 0.2s ease;
+          border-left: 3px solid transparent;
+          text-align: left; /* Ensure text aligns left */
         }
 
         .navGroupBtn:hover {
-          background: rgba(255, 255, 255, 0.12);
+          background: rgba(255, 255, 255, 0.1);
           color: #ffffff;
+          padding-left: 20px;
         }
 
-        .activeGroup .navGroupBtn {
-          background: rgba(255, 255, 255, 0.12);
+        /* Active state for the parent button when a child is active */
+        .activeGroup > .navGroupBtn {
           color: #ffffff;
+          font-weight: 600;
+          background: rgba(255, 255, 255, 0.05);
+        }
+        
+        .navGroup.open > .navGroupBtn {
+          background: transparent; /* Remove double background when open */
+          padding-bottom: 10px; /* Space between title and list */
+        }
+        
+        .navGroup.open > .navGroupBtn:hover {
+           background: rgba(255, 255, 255, 0.05);
         }
 
         .navChevron {
           margin-left: auto;
-          opacity: 0.9;
-          font-size: 12px;
+          opacity: 0.7;
+          font-size: 10px;
+          transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          width: 20px;
+          height: 20px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: rgba(255,255,255,0.1);
+          border-radius: 50%;
+        }
+        
+        .navGroupBtn:hover .navChevron {
+          background: rgba(255,255,255,0.2);
+          opacity: 1;
+        }
+        
+        .open .navChevron {
+          transform: rotate(90deg);
+          background: rgba(255,255,255,0.25);
+          color: #fff;
         }
 
+        /* Smooth accordion animation */
         .navSub {
-          display: none;
-          padding: 6px 0 8px 16px;
+          display: grid;
+          grid-template-rows: 0fr;
+          transition: grid-template-rows 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .open .navSub {
-          display: block;
+          grid-template-rows: 1fr;
+        }
+        
+        .navSubInner {
+          overflow: hidden;
+          padding: 0 0 8px 0;
         }
 
-        .navSub :global(.navItem) {
-          padding: 9px 10px;
-          font-weight: 600;
+        .navSubInner :global(.navItem) {
+          padding: 10px 16px 10px 48px; /* Deep indentation for hierarchy */
           font-size: 13px;
-          border-radius: 10px;
+          font-weight: 500;
+          border-radius: 0; /* Full width look inside group */
+          margin-top: 2px;
+          border-left: 0;
+          position: relative;
+        }
+        
+        .navSubInner :global(.navItem)::before {
+          content: "";
+          position: absolute;
+          left: 28px;
+          top: 50%;
+          width: 4px;
+          height: 4px;
+          background: rgba(255,255,255,0.4);
+          border-radius: 50%;
+          transform: translateY(-50%);
+          transition: all 0.2s;
+        }
+        
+        .navSubInner :global(.navItem:hover) {
+           padding-left: 52px;
+           background: rgba(255, 255, 255, 0.05);
+        }
+        
+        .navSubInner :global(.navItem:hover)::before {
+           background: #fff;
+        }
+        
+        .navSubInner :global(.navItem.active) {
+           background: rgba(255, 255, 255, 0.1);
+           box-shadow: none;
+           color: #fff;
+        }
+        
+        .navSubInner :global(.navItem.active)::before {
+           background: #fff;
+           width: 6px;
+           height: 6px;
+           box-shadow: 0 0 8px rgba(255,255,255,0.4);
         }
 
         .content {
@@ -326,38 +446,45 @@ export default function AdminShell({ children, email }) {
           align-items: center;
           justify-content: space-between;
           gap: 14px;
-          padding: 16px 18px;
+          padding: 16px 24px;
           border-bottom: 1px solid #edf2f7;
+          box-shadow: 0 1px 2px rgba(0,0,0,0.03);
         }
 
         .welcomeTitle {
           font-weight: 800;
-          color: #0f172a;
-          font-size: 18px;
-          line-height: 1.1;
+          color: #1e293b;
+          font-size: 20px;
+          line-height: 1.2;
         }
 
         .welcomeSub {
           color: #64748b;
-          font-size: 12px;
+          font-size: 13px;
           margin-top: 4px;
         }
 
         .topbarRight {
           display: flex;
           align-items: center;
-          gap: 10px;
+          gap: 12px;
         }
 
         .search {
           display: flex;
           align-items: center;
           gap: 10px;
-          background: #f1f5f9;
+          background: #f8fafc;
           border: 1px solid #e2e8f0;
-          border-radius: 12px;
-          padding: 8px 12px;
-          width: 320px;
+          border-radius: 10px;
+          padding: 10px 14px;
+          width: 300px;
+          transition: border-color 0.2s;
+        }
+        
+        .search:focus-within {
+          border-color: #0b6f6c;
+          box-shadow: 0 0 0 2px rgba(11, 111, 108, 0.1);
         }
 
         .searchInput {
@@ -365,56 +492,64 @@ export default function AdminShell({ children, email }) {
           border: 0;
           outline: 0;
           background: transparent;
-          font-size: 13px;
+          font-size: 14px;
           color: #0f172a;
         }
 
         .iconBtn {
-          width: 38px;
-          height: 38px;
-          border-radius: 12px;
+          width: 40px;
+          height: 40px;
+          border-radius: 10px;
           border: 1px solid #e2e8f0;
           background: #ffffff;
-          color: #334155;
+          color: #64748b;
+          cursor: pointer;
+          transition: all 0.2s;
+          display: flex;
+          align-items: center;
+          justify-content: center;
         }
 
         .iconBtn:hover {
-          background: #f8fafc;
+          background: #f1f5f9;
+          color: #0b6f6c;
+          border-color: #cbd5e1;
         }
 
         .user {
           display: flex;
           align-items: center;
-          gap: 10px;
-          padding: 6px 8px;
-          border-radius: 14px;
+          gap: 12px;
+          padding: 6px 8px 6px 6px;
+          border-radius: 12px;
           border: 1px solid #e2e8f0;
           background: #ffffff;
-          margin-left: 4px;
+          margin-left: 8px;
         }
 
         .userAvatar {
-          width: 34px;
-          height: 34px;
-          border-radius: 12px;
+          width: 36px;
+          height: 36px;
+          border-radius: 10px;
           display: inline-flex;
           align-items: center;
           justify-content: center;
           background: #f1f5f9;
-          color: #0f172a;
+          color: #0b6f6c;
+          font-size: 16px;
         }
 
         .userMeta {
           display: flex;
           flex-direction: column;
-          line-height: 1.1;
+          line-height: 1.2;
         }
 
         .userName {
-          font-size: 12px;
+          font-size: 13px;
           font-weight: 700;
           color: #0f172a;
-          max-width: 170px;
+          max-width: 150px;
           overflow: hidden;
           text-overflow: ellipsis;
           white-space: nowrap;
@@ -423,54 +558,65 @@ export default function AdminShell({ children, email }) {
         .userRole {
           font-size: 11px;
           color: #64748b;
+          font-weight: 500;
         }
 
         .logoutBtn {
           border: 0;
-          background: #0b6f6c;
-          color: #ffffff;
-          border-radius: 10px;
-          padding: 8px 10px;
-          font-weight: 700;
+          background: #ffe4e6;
+          color: #be123c;
+          border-radius: 8px;
+          padding: 8px 12px;
+          font-weight: 600;
           font-size: 12px;
+          cursor: pointer;
+          transition: background 0.2s;
+          margin-left: 8px;
         }
 
         .logoutBtn:hover {
-          background: #095d5a;
+          background: #fecdd3;
         }
 
         .crumbs {
-          padding: 14px 18px 0;
+          padding: 20px 24px 0;
           display: flex;
           align-items: center;
-          gap: 8px;
+          gap: 10px;
           color: #94a3b8;
-          font-size: 12px;
+          font-size: 13px;
         }
 
         .crumb {
           display: inline-flex;
           align-items: center;
-          gap: 8px;
+          gap: 10px;
         }
 
         .sep {
           color: #cbd5e1;
+          font-size: 11px;
         }
 
         .crumbLink {
           text-decoration: none;
           color: #64748b;
-          font-weight: 700;
-          text-transform: capitalize;
+          font-weight: 600;
+          transition: color 0.2s;
+        }
+        
+        .crumbLink:hover {
+          color: #0b6f6c;
         }
 
         .crumbLink.current {
           color: #0f172a;
+          font-weight: 700;
+          pointer-events: none;
         }
 
         .main {
-          padding: 18px;
+          padding: 24px;
         }
 
         @media (max-width: 1100px) {
@@ -485,6 +631,7 @@ export default function AdminShell({ children, email }) {
         @media (max-width: 900px) {
           .sidebar {
             width: 240px;
+            padding: 16px 12px;
           }
           .welcome {
             display: none;
@@ -493,10 +640,12 @@ export default function AdminShell({ children, email }) {
 
         @media (max-width: 640px) {
           .sidebar {
-            display: none;
+            position: fixed;
+            left: -280px;
+            /* To do: Add mobile toggle logic if needed, but for now just hiding as per original */
           }
           .search {
-            width: 180px;
+            width: 160px;
           }
         }
       `}</style>
