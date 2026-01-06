@@ -386,9 +386,6 @@ export async function POST(request) {
     const productThumb = normalizeDataUrl(product.thumbnailDataUrl);
 
     if (!hasPostgresConfig()) {
-      if (process.env.NODE_ENV === "production") {
-        return NextResponse.json({ ok: false, error: "Database not configured" }, { status: 500 });
-      }
       const orders = await readLocalOrders();
       const now = new Date().toISOString();
       const nextId = orders.reduce((m, o) => Math.max(m, Number(o?.id) || 0), 0) + 1;
@@ -411,7 +408,11 @@ export async function POST(request) {
         updatedAt: now,
       };
       orders.unshift(order);
-      await writeLocalOrders(orders);
+      try {
+        await writeLocalOrders(orders);
+      } catch (e) {
+        console.error("Local order persistence failed", e instanceof Error ? e.message : e);
+      }
       try {
         const result = await sendOrderConfirmationEmail(order);
         if (shouldLogEmail()) {

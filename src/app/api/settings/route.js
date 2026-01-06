@@ -45,6 +45,7 @@ export async function GET() {
       const local = await readLocalSettings();
       return NextResponse.json({
         ok: true,
+        dbConfigured: false,
         data: {
           logoDataUrl: typeof local.logoDataUrl === "string" ? local.logoDataUrl : "",
           faviconDataUrl: typeof local.faviconDataUrl === "string" ? local.faviconDataUrl : "",
@@ -72,6 +73,7 @@ export async function GET() {
 
     return NextResponse.json({
       ok: true,
+      dbConfigured: true,
       data: {
         logoDataUrl: row?.logo_data_url ?? "",
         faviconDataUrl: row?.favicon_data_url ?? "",

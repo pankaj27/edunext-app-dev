@@ -46,6 +46,7 @@ export default function AdminShell({ children, email }) {
   // Initialize state based on current path to ensure correct initial expansion
   const [productsOpen, setProductsOpen] = useState(false);
   const [ordersOpen, setOrdersOpen] = useState(false);
+  const [dbConfigured, setDbConfigured] = useState(true);
 
   // Sync state with path changes
   useEffect(() => {
@@ -56,6 +57,22 @@ export default function AdminShell({ children, email }) {
   useEffect(() => {
     if (isOrdersActive) setOrdersOpen(true);
   }, [isOrdersActive]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/settings", { cache: "no-store" });
+        const json = await res.json().catch(() => null);
+        if (!cancelled) setDbConfigured(Boolean(json?.dbConfigured));
+      } catch {
+        // Keep default true to avoid false warnings on temporary failures
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const breadcrumbs = useMemo(() => {
     const parts = pathname.split("/").filter(Boolean);
@@ -199,6 +216,17 @@ export default function AdminShell({ children, email }) {
             </div>
           ))}
         </div>
+
+        {!dbConfigured ? (
+          <div className="envBanner" role="alert">
+            <div className="envBannerIcon" aria-hidden="true">
+              <i className="fa-solid fa-circle-info" />
+            </div>
+            <div className="envBannerText">
+              Orders and product data are stored locally because the live database is not configured. Configure database env vars to enable persistent storage.
+            </div>
+          </div>
+        ) : null}
 
         <main className="main">{children}</main>
       </div>
@@ -617,6 +645,33 @@ export default function AdminShell({ children, email }) {
 
         .main {
           padding: 24px;
+        }
+        
+        .envBanner {
+          margin: 0 24px 8px;
+          padding: 12px 14px;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          border: 1px solid #fde68a;
+          background: #fffbeb;
+          color: #92400e;
+          border-radius: 12px;
+        }
+        .envBannerIcon {
+          width: 22px;
+          height: 22px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          background: #fef3c7;
+          border-radius: 50%;
+          color: #b45309;
+          font-size: 12px;
+        }
+        .envBannerText {
+          font-size: 13px;
+          font-weight: 600;
         }
 
         @media (max-width: 1100px) {
